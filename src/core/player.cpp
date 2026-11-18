@@ -180,8 +180,14 @@ Player::Player(PinTable *const table, const PlayMode playMode, LoadProgress &loa
       {
 #if defined(_MSC_VER) || defined(__MINGW32__)
          SetDllDirectoryW(MakeWString(directory).c_str()); // The paths are UTF-8
-#endif
+         // Game Vault (Xbox): SDL for Xbox apps loads with LoadPackagedLibrary, which refuses full paths, so load directly
+         // (altered search path: the plugin's own DLLs next to it are found)
+         void *dynamicModule = static_cast<void *>(LoadLibraryExW(MakeWString(file).c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH));
+         if (dynamicModule == nullptr)
+            PLOGE << "LoadLibraryEx failed for " << file << ", error " << GetLastError();
+#else
          void *dynamicModule = static_cast<void *>(SDL_LoadObject(file.c_str())); // SDL expects UTF-8
+#endif
 #if defined(_MSC_VER) || defined(__MINGW32__)
          SetDllDirectory(NULL);
 #endif

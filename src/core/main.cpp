@@ -335,8 +335,9 @@ public:
 
 static int SDLCALL VpxXboxMain(int, char**)
 {
-   // SDL audio open hangs in an Xbox app (first tests run silent; an XAudio2 path comes later)
+   // SDL audio open hangs in an Xbox app: SDL gets its silent driver and AudioPlayer plays through XAudio2
    SDL_SetHint(SDL_HINT_AUDIO_DRIVER, "dummy");
+   SDL_SetHint("VPX_XBOX_AUDIO", "1");
    // The activation (and its link) arrives while SDL pumps the window's events
    SDL_InitSubSystem(SDL_INIT_VIDEO);
    const char* uri = nullptr;

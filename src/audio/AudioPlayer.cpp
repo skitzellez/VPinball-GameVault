@@ -60,13 +60,150 @@ void AddOpusDecoder(ma_decoder_config& config)
 
 // Simple SDL3 backend for miniaudio, derived from miniaudio's backend example
 
+#ifdef _WIN32
+// the build targets Windows 7; XAudio 2.9 (loaded at run time, Xbox and Windows 10+) needs the Windows 10 declarations
+#pragma push_macro("_WIN32_WINNT")
+#undef _WIN32_WINNT
+#define _WIN32_WINNT 0x0A00
+#include <xaudio2.h>
+#pragma pop_macro("_WIN32_WINNT")
+#endif
+
 struct ma_device_ex
 {
    ma_device device; // Make this the first member so we can cast between ma_device and ma_device_ex.
    SDL_AudioDeviceID deviceID;
    SDL_AudioStream* stream;
    vector<uint8_t> buffer;
+#ifdef _WIN32
+   // Game Vault (Xbox): XAudio2 output (SDL audio never finishes opening in an Xbox app)
+   IXAudio2SourceVoice* xvoice;
+   HANDLE xthread;
+   volatile bool xrunning;
+   volatile bool xplaying;
+#endif
 };
+
+#ifdef _WIN32
+// Copyright (c) 2026 Skitzelles - part of Game Vault, https://github.com/skitzellez/xbox-game-vault
+// Game Vault (Xbox): main.cpp sets the hint VPX_XBOX_AUDIO in the Xbox app. Each miniaudio device then gets an XAudio2
+// voice and a feeder thread that asks miniaudio for the next block whenever XAudio2 has room (like SDL's callback).
+static constexpr int kXboxBlockFrames = 480; // 10 ms at 48 kHz
+static constexpr int kXboxBlocks = 8;
+static constexpr int kXboxQueued = 4; // ~40 ms queued
+static constexpr int kXboxRate = 48000;
+static constexpr int kXboxChannels = 2;
+
+static bool XboxAudio() { return SDL_GetHintBoolean("VPX_XBOX_AUDIO", false); }
+
+static IXAudio2* XboxAudioEngine()
+{
+   static IXAudio2* s_xaudio = nullptr;
+   static bool s_tried = false;
+   if (s_tried)
+      return s_xaudio;
+   s_tried = true;
+   typedef HRESULT(WINAPI * XAudio2CreateFunction)(IXAudio2**, UINT32, XAUDIO2_PROCESSOR);
+   HMODULE library = LoadLibraryExW(L"xaudio2_9.dll", nullptr, 0);
+   const auto create = library ? reinterpret_cast<XAudio2CreateFunction>(reinterpret_cast<void*>(GetProcAddress(library, "XAudio2Create"))) : nullptr;
+   if (create == nullptr)
+   {
+      PLOGE << "Xbox audio: xaudio2_9.dll not available (error " << GetLastError() << ')';
+      return nullptr;
+   }
+   IXAudio2* xaudio = nullptr;
+   HRESULT hr = create(&xaudio, 0, XAUDIO2_DEFAULT_PROCESSOR);
+   if (FAILED(hr))
+   {
+      PLOGE << "Xbox audio: XAudio2Create failed 0x" << std::hex << hr;
+      return nullptr;
+   }
+   IXAudio2MasteringVoice* master = nullptr;
+   hr = xaudio->CreateMasteringVoice(&master, kXboxChannels, kXboxRate, 0, nullptr, nullptr, AudioCategory_GameEffects);
+   if (FAILED(hr))
+   {
+      PLOGE << "Xbox audio: CreateMasteringVoice failed 0x" << std::hex << hr;
+      return nullptr;
+   }
+   s_xaudio = xaudio;
+   return s_xaudio;
+}
+
+static DWORD WINAPI XboxAudioFeeder(LPVOID param)
+{
+   set_denormals_flush_to_zero_once();
+   auto pDevice = static_cast<ma_device_ex*>(param);
+   constexpr int blockBytes = kXboxBlockFrames * kXboxChannels * (int)sizeof(float);
+   pDevice->buffer.resize(blockBytes * kXboxBlocks);
+   int next = 0;
+   while (pDevice->xrunning)
+   {
+      XAUDIO2_VOICE_STATE state;
+      pDevice->xvoice->GetState(&state, XAUDIO2_VOICE_NOSAMPLESPLAYED);
+      if (state.BuffersQueued >= kXboxQueued)
+      {
+         Sleep(2);
+         continue;
+      }
+      uint8_t* block = pDevice->buffer.data() + next * blockBytes;
+      if (pDevice->xplaying)
+         ma_device__read_frames_from_client(&pDevice->device, kXboxBlockFrames, block);
+      else
+         memset(block, 0, blockBytes);
+      // the log shows the loudest sample every 10 s, so a report tells whether sound came out
+      static thread_local float peak = 0.f;
+      static thread_local int blocks = 0;
+      for (int i = 0; i < kXboxBlockFrames * kXboxChannels; i++)
+         peak = std::max(peak, std::abs(reinterpret_cast<const float*>(block)[i]));
+      if (++blocks == 1000)
+      {
+         PLOGI << "Xbox audio: device " << (void*)pDevice << " peak level " << peak;
+         peak = 0.f;
+         blocks = 0;
+      }
+      XAUDIO2_BUFFER buffer = {};
+      buffer.AudioBytes = blockBytes;
+      buffer.pAudioData = block;
+      pDevice->xvoice->SubmitSourceBuffer(&buffer, nullptr);
+      next = (next + 1) % kXboxBlocks;
+   }
+   return 0;
+}
+
+static ma_result XboxAudioInit(ma_device_ex* pDeviceEx, ma_device_descriptor* pDescriptorPlayback)
+{
+   IXAudio2* xaudio = XboxAudioEngine();
+   if (xaudio == nullptr)
+      return MA_FAILED_TO_OPEN_BACKEND_DEVICE;
+   WAVEFORMATEX format = {};
+   format.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
+   format.nChannels = kXboxChannels;
+   format.nSamplesPerSec = kXboxRate;
+   format.wBitsPerSample = 32;
+   format.nBlockAlign = kXboxChannels * 4;
+   format.nAvgBytesPerSec = kXboxRate * format.nBlockAlign;
+   HRESULT hr = xaudio->CreateSourceVoice(&pDeviceEx->xvoice, &format, 0, XAUDIO2_DEFAULT_FREQ_RATIO, nullptr, nullptr, nullptr);
+   if (FAILED(hr))
+   {
+      PLOGE << "Xbox audio: CreateSourceVoice failed 0x" << std::hex << hr;
+      return MA_FAILED_TO_OPEN_BACKEND_DEVICE;
+   }
+   pDescriptorPlayback->format = ma_format_f32;
+   pDescriptorPlayback->channels = kXboxChannels;
+   pDescriptorPlayback->sampleRate = kXboxRate;
+   pDescriptorPlayback->periodSizeInFrames = kXboxBlockFrames;
+   pDescriptorPlayback->periodCount = kXboxQueued;
+   ma_channel_map_init_standard(ma_standard_channel_map_default, pDescriptorPlayback->channelMap, std::size(pDescriptorPlayback->channelMap), pDescriptorPlayback->channels);
+   pDeviceEx->xplaying = false;
+   pDeviceEx->xrunning = true;
+   pDeviceEx->xvoice->Start(0, XAUDIO2_COMMIT_NOW);
+   pDeviceEx->xthread = CreateThread(nullptr, 0, XboxAudioFeeder, pDeviceEx, 0, nullptr);
+   if (pDeviceEx->xthread)
+      SetThreadPriority(pDeviceEx->xthread, THREAD_PRIORITY_HIGHEST);
+   PLOGI << "Audio device initialized. Device: Xbox (XAudio2), Freq : " << kXboxRate << ", Format: F32, Channels: " << kXboxChannels;
+   return MA_SUCCESS;
+}
+#endif
 
 static ma_result ma_context_enumerate_devices__sdl(ma_context* pContext, ma_enum_devices_callback_proc callback, void* pUserData)
 {
@@ -107,6 +244,14 @@ static ma_result ma_context_get_device_info__sdl(ma_context* pContext, ma_device
       pDeviceInfo->isDefault = MA_TRUE;
 
    SDL_AudioSpec specs;
+#ifdef _WIN32
+   if (XboxAudio())
+   {
+      specs.channels = kXboxChannels;
+      specs.freq = kXboxRate;
+   }
+   else
+#endif
    if (pDeviceInfo->isDefault)
    {
       SDL_AudioDeviceID tempDeviceID = SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, nullptr);
@@ -151,6 +296,13 @@ static ma_result ma_device_init__sdl(ma_device* pDevice, const ma_device_config*
       return MA_DEVICE_TYPE_NOT_SUPPORTED;
 
    auto pDeviceEx = reinterpret_cast<ma_device_ex*>(pDevice);
+
+#ifdef _WIN32
+   pDeviceEx->xvoice = nullptr;
+   pDeviceEx->xthread = nullptr;
+   if (XboxAudio())
+      return XboxAudioInit(pDeviceEx, pDescriptorPlayback);
+#endif
 
    auto requestedDeviceId = SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK;
    if (pConfig->playback.pDeviceID)
@@ -224,6 +376,20 @@ static ma_result ma_device_init__sdl(ma_device* pDevice, const ma_device_config*
 
 static ma_result ma_device_uninit__sdl(ma_device* pDevice)
 {
+#ifdef _WIN32
+   if (auto pDeviceEx = reinterpret_cast<ma_device_ex*>(pDevice); pDeviceEx->xvoice)
+   {
+      pDeviceEx->xrunning = false;
+      if (pDeviceEx->xthread)
+      {
+         WaitForSingleObject(pDeviceEx->xthread, 1000);
+         CloseHandle(pDeviceEx->xthread);
+      }
+      pDeviceEx->xvoice->DestroyVoice();
+      pDeviceEx->xvoice = nullptr;
+      return MA_SUCCESS;
+   }
+#endif
    if (auto pDeviceEx = reinterpret_cast<ma_device_ex*>(pDevice); pDeviceEx->stream)
       SDL_DestroyAudioStream(pDeviceEx->stream);
    return MA_SUCCESS;
@@ -231,6 +397,13 @@ static ma_result ma_device_uninit__sdl(ma_device* pDevice)
 
 static ma_result ma_device_start__sdl(ma_device* pDevice)
 {
+#ifdef _WIN32
+   if (auto pDeviceEx = reinterpret_cast<ma_device_ex*>(pDevice); pDeviceEx->xvoice)
+   {
+      pDeviceEx->xplaying = true;
+      return MA_SUCCESS;
+   }
+#endif
    if (auto pDeviceEx = reinterpret_cast<ma_device_ex*>(pDevice); pDeviceEx->stream)
       SDL_ResumeAudioStreamDevice(pDeviceEx->stream);
    return MA_SUCCESS;
@@ -238,6 +411,13 @@ static ma_result ma_device_start__sdl(ma_device* pDevice)
 
 static ma_result ma_device_stop__sdl(ma_device* pDevice)
 {
+#ifdef _WIN32
+   if (auto pDeviceEx = reinterpret_cast<ma_device_ex*>(pDevice); pDeviceEx->xvoice)
+   {
+      pDeviceEx->xplaying = false;
+      return MA_SUCCESS;
+   }
+#endif
    if (auto pDeviceEx = reinterpret_cast<ma_device_ex*>(pDevice); pDeviceEx->stream)
       SDL_PauseAudioStreamDevice(pDeviceEx->stream);
    return MA_SUCCESS;
