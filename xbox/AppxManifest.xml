@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright (c) 2026 Skitzelles - part of Game Vault. Visual Pinball X itself: GPLv3+ and its own licence (see licenses). -->
 <Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
          xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
          xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
          IgnorableNamespaces="uap rescap">
-  <Identity Name="GamerDad.VPinballX" Publisher="CN=GamerDad" Version="0.1.0.1" ProcessorArchitecture="x64" />
+  <Identity Name="GamerDad.VPinballForGameVault" Publisher="CN=GamerDad" Version="0.1.0.1" ProcessorArchitecture="x64" />
   <Properties>
-    <DisplayName>Visual Pinball X for Game Vault</DisplayName>
+    <DisplayName>Game Vault · Visual Pinball</DisplayName>
     <PublisherDisplayName>Skitzelles</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
@@ -19,16 +20,16 @@
   </Resources>
   <Applications>
     <Application Id="App" Executable="VPinballX_BGFXStandalone64.exe" EntryPoint="VPinballX.App">
-      <uap:VisualElements DisplayName="Visual Pinball X" Description="Visual Pinball X standalone with PinMAME, for Xbox Dev Mode"
+      <uap:VisualElements DisplayName="Game Vault · Visual Pinball" Description="Visual Pinball X tables (with PinMAME) for Game Vault"
                           Square150x150Logo="Assets\Square150x150Logo.png" Square44x44Logo="Assets\Square44x44Logo.png"
                           BackgroundColor="#000000">
         <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" />
         <uap:SplashScreen Image="Assets\SplashScreen.png" BackgroundColor="#000000" />
       </uap:VisualElements>
       <Extensions>
-        <!-- Game Vault starts a table with vpinball:?table=<path> -->
+        <!-- Game Vault starts a table with gamevault-vpinball:?table=<path>&launchOnExit=gamevault:?from=vpinball -->
         <uap:Extension Category="windows.protocol">
-          <uap:Protocol Name="vpinball" />
+          <uap:Protocol Name="gamevault-vpinball" />
         </uap:Extension>
       </Extensions>
     </Application>
@@ -39,4 +40,11 @@
     <rescap:Capability Name="expandedResources" />
     <uap:Capability Name="removableStorage" />
   </Capabilities>
+  <Extensions>
+    <Extension Category="windows.publisherCacheFolders">
+      <PublisherCacheFolders>
+        <Folder Name="games" />
+      </PublisherCacheFolders>
+    </Extension>
+  </Extensions>
 </Package>

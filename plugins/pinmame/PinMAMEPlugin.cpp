@@ -468,6 +468,13 @@ MSGPI_EXPORT void MSGPIAPI PinMAMEPluginLoad(const uint32_t sessionId, const Msg
                pinmamePath = pinmamePath.parent_path();
             memmapPath = find_case_insensitive_directory_path(tablePath.parent_path() / "pinmame"sv / "memmaps"sv);
             gamedefPath = find_case_insensitive_directory_path(tablePath.parent_path() / "pinmame"sv / "gamedefs"sv);
+            // Game Vault: a table in a folder of its own (Tables\<table>\<table>.vpx) finds the pinmame folder one up
+            if (pinmamePath.empty())
+            {
+               pinmamePath = find_case_insensitive_directory_path(tablePath.parent_path().parent_path() / "pinmame"sv / "roms"sv);
+               if (!pinmamePath.empty())
+                  pinmamePath = pinmamePath.parent_path();
+            }
          }
       }
 
@@ -491,6 +498,17 @@ MSGPI_EXPORT void MSGPIAPI PinMAMEPluginLoad(const uint32_t sessionId, const Msg
          if (gamedefPath.empty())
             gamedefPath = find_case_insensitive_directory_path(pluginPath / "gamedefs"sv);
       }
+
+#ifdef _WIN32
+      // Game Vault (Xbox): an Xbox app has no Visual PinMAME install, so the app's own pinmame folder comes next
+      if (pinmamePath.empty() && vpxApi != nullptr && getenv("VPX_XBOX_APP") != nullptr)
+      {
+         VPXInfo vpxInfo {};
+         vpxApi->GetVpxInfo(&vpxInfo);
+         if (const std::filesystem::path prefPath = PluginStrings::PathFromNative(vpxInfo.prefPath); !prefPath.empty())
+            pinmamePath = find_case_insensitive_directory_path(prefPath / "pinmame"sv);
+      }
+#endif
 
       // Custom platforms defaults
       #if (defined(__APPLE__) && ((defined(TARGET_OS_IOS) && TARGET_OS_IOS) || (defined(TARGET_OS_TV) && TARGET_OS_TV))) || defined(__ANDROID__)

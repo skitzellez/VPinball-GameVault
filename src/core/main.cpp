@@ -339,6 +339,7 @@ static int SDLCALL VpxXboxMain(int, char**)
    SDL_SetHint(SDL_HINT_AUDIO_DRIVER, "dummy");
    SDL_SetHint("VPX_XBOX_AUDIO", "1");
    SDL_SetHint("VPX_XBOX_APP", "1");
+   _putenv("VPX_XBOX_APP=1");   // (plugins have no SDL: they read the environment)
    // Windows.Gaming.Input: the only controller API in an Xbox app (our SDL keeps it off unless asked)
    SDL_SetHint("SDL_JOYSTICK_WGI", "1");
    // The activation (and its link) arrives while SDL pumps the window's events

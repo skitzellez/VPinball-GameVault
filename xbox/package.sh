@@ -1,7 +1,7 @@
 #!/bin/bash
 # Copyright (c) 2026 Skitzelles - part of Game Vault, https://github.com/skitzellez/xbox-game-vault
 # PolyForm Noncommercial License 1.0.0: not for sale, and this notice stays in every copy.
-# Packs dist/VPinballX_x64.appx for Xbox Dev Mode: the standalone build (Release_BGFX x64), our Xbox SDL3 (sdl3-uwp)
+# Packs dist/VPinballForGameVault_<version>_x64.appx for Xbox Dev Mode: the standalone build (Release_BGFX x64), our Xbox SDL3 (sdl3-uwp)
 # in place of SDL364.dll, the Visual C++ runtime app-local, a test table; marks the exe AppContainer and signs it.
 # xbox/package.sh <version>
 set -e
@@ -36,12 +36,13 @@ cp "$REPO/LICENSE" "$P/licenses/VPinballX-LICENSE.txt" 2>/dev/null || true
 cp "$SDL3_UWP/LICENSE.txt" "$P/licenses/SDL3-LICENSE.txt"
 
 # nothing from the build PC's folders may ship
-if grep -a -l -i "users[\\/]gamerdad" "$P/VPinballX_BGFXStandalone64.exe"; then echo "WARNING: a build-PC path is in the exe (pdb path)"; fi
+PY=${PY:-/c/Users/GamerDad/AppData/Local/Programs/Python/Python312/python.exe}
+"$PY" "$(cygpath -w "$REPO/xbox/scrub_paths.py")" "$(cygpath -w "$P")" "$(cygpath -w "$ROOT")"
 "$VC/editbin.exe" //nologo //APPCONTAINER //SUBSYSTEM:WINDOWS "$P/VPinballX_BGFXStandalone64.exe"
 sed -i "s/ Version=\"[0-9.]*\" ProcessorArchitecture/ Version=\"$V\" ProcessorArchitecture/" "$P/AppxManifest.xml"
-mkdir -p "$REPO/dist"; rm -f "$REPO/dist/VPinballX_x64.appx"
-"$SDK/makeappx.exe" pack //o //d "$(cygpath -w "$P")" //p "$(cygpath -w "$REPO/dist/VPinballX_x64.appx")" >/dev/null
+mkdir -p "$REPO/dist"; rm -f "$REPO/dist/VPinballForGameVault_$V""_x64.appx"
+"$SDK/makeappx.exe" pack //o //d "$(cygpath -w "$P")" //p "$(cygpath -w "$REPO/dist/VPinballForGameVault_$V""_x64.appx")" >/dev/null
 PFX_PASSWORD=${PFX_PASSWORD:-$(/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -NoProfile -ExecutionPolicy Bypass \
     -File "$(cygpath -w "$ROOT/GameVault/pfx_password.ps1")" | tr -d '\r\n')}
-"$SDK/signtool.exe" sign //fd SHA256 //a //f "$(cygpath -w "$PFX_FILE")" //p "$PFX_PASSWORD" "$(cygpath -w "$REPO/dist/VPinballX_x64.appx")" >/dev/null
-ls -la "$REPO/dist/VPinballX_x64.appx"
+"$SDK/signtool.exe" sign //fd SHA256 //a //f "$(cygpath -w "$PFX_FILE")" //p "$PFX_PASSWORD" "$(cygpath -w "$REPO/dist/VPinballForGameVault_$V""_x64.appx")" >/dev/null
+ls -la "$REPO/dist/VPinballForGameVault_$V""_x64.appx"
