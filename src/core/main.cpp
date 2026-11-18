@@ -338,6 +338,7 @@ static int SDLCALL VpxXboxMain(int, char**)
    // SDL audio open hangs in an Xbox app: SDL gets its silent driver and AudioPlayer plays through XAudio2
    SDL_SetHint(SDL_HINT_AUDIO_DRIVER, "dummy");
    SDL_SetHint("VPX_XBOX_AUDIO", "1");
+   SDL_SetHint("VPX_XBOX_APP", "1");
    // Windows.Gaming.Input: the only controller API in an Xbox app (our SDL keeps it off unless asked)
    SDL_SetHint("SDL_JOYSTICK_WGI", "1");
    // The activation (and its link) arrives while SDL pumps the window's events

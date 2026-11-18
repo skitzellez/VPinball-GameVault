@@ -233,7 +233,14 @@ void InputManager::SetDeviceDefaultMapping(uint16_t deviceId, const std::functio
    };
    ValidateMapping validate(*this);
    mapper(validate);
-   if (!validate.m_isAlreadyMapped)
+   if (!validate.m_isAlreadyMapped && SDL_GetHintBoolean("VPX_XBOX_APP", false))
+   {
+      // Game Vault (Xbox): the controller cannot answer the "apply default layout?" question before it has a layout
+      // (and there is no keyboard), so the default layout is applied straight away
+      PLOGI << "Xbox app: default layout applied to device " << deviceId;
+      ApplyDefaultDeviceMapping(deviceId);
+   }
+   else if (!validate.m_isAlreadyMapped)
    {
       m_inputDevices[deviceId].m_hasPendingLayoutApply = true;
       m_hasPendingLayoutApply = true;
