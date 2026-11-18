@@ -1479,6 +1479,11 @@ RenderDevice::RenderDevice(
    }
    if (init.type == bgfx::RendererType::Noop)
       init.type = bgfx::RendererType::Count;
+#if BX_PLATFORM_WINDOWS
+   // Game Vault (Xbox): an Xbox app's Direct3D 12 refuses the DXIL shaders (no signed DXIL there), so Default means Direct3D 11
+   if (init.type == bgfx::RendererType::Count && swapchainWnd->GetNativeHWND() == nullptr)
+      init.type = bgfx::RendererType::Direct3D11;
+#endif
    if (g_pplayer->m_vrDevice == nullptr)
    {
       // Requested only: BGFX may fall back to another backend if the requested one cannot initialize. The
@@ -1518,6 +1523,13 @@ RenderDevice::RenderDevice(
    init.swapChain.nwh = SDL_GetPointerProperty(SDL_GetWindowProperties(swapchainWnd->GetCore()), SDL_PROP_WINDOW_ANDROID_WINDOW_POINTER, NULL);
    #elif BX_PLATFORM_WINDOWS
    init.swapChain.nwh = swapchainWnd->GetNativeHWND();
+   if (init.swapChain.nwh == nullptr)
+   {
+      // Game Vault (Xbox): running as an Xbox app, the window is a WinRT CoreWindow (ndt 7 tells our bgfx patch)
+      init.swapChain.nwh = SDL_GetPointerProperty(SDL_GetWindowProperties(swapchainWnd->GetCore()), "SDL.window.winrt.window", NULL);
+      init.swapChain.ndt = reinterpret_cast<void*>(7);
+      PLOGI << "Xbox app window (CoreWindow " << init.swapChain.nwh << ")";
+   }
    #elif BX_PLATFORM_STEAMLINK
    init.swapChain.ndt = wmInfo.info.vivante.display;
    init.swapChain.nwh = wmInfo.info.vivante.window;
@@ -2260,6 +2272,8 @@ void RenderDevice::AddWindow(VPX::Window* wnd)
    nwh = SDL_GetPointerProperty(SDL_GetWindowProperties(sdlWnd), SDL_PROP_WINDOW_ANDROID_WINDOW_POINTER, NULL);
 #elif BX_PLATFORM_WINDOWS
    nwh = wnd->GetNativeHWND();
+   if (nwh == nullptr) // Game Vault (Xbox): an Xbox app has one window only
+      return;
 #elif BX_PLATFORM_STEAMLINK
    nwh = wmInfo.info.vivante.window;
 #else

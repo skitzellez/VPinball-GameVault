@@ -3,6 +3,7 @@
 set -e
 
 source ./platforms/config.sh
+PROJECT_ROOT="$(pwd)"
 
 if [ -z "${MSYS2_PATH}" ]; then
    MSYS2_PATH="/c/msys64"
@@ -165,6 +166,8 @@ if [ "${BGFX_EXPECTED_SHA}" != "${BGFX_FOUND_SHA}" ]; then
    cd bgfx.cmake
    rm -rf bgfx
    mv ../bgfx-${BGFX_PATCH_SHA} bgfx
+   # Game Vault (Xbox): swap chain on a WinRT CoreWindow when the app runs as an Xbox app
+   patch -d bgfx -p1 < "$PROJECT_ROOT/xbox/bgfx-corewindow.patch"
    sed -i.bak 's/set_target_properties(bx PROPERTIES FOLDER "bgfx")/set_target_properties(bx PROPERTIES FOLDER "bgfx" OUTPUT_NAME "bx64")/g' cmake/bx/bx.cmake
    sed -i.bak 's/set_target_properties(bimg PROPERTIES FOLDER "bgfx")/set_target_properties(bimg PROPERTIES FOLDER "bgfx" OUTPUT_NAME "bimg64")/g' cmake/bimg/bimg.cmake
    sed -i.bak 's/set_target_properties(bimg_encode PROPERTIES FOLDER "bgfx")/set_target_properties(bimg_encode PROPERTIES FOLDER "bgfx" OUTPUT_NAME "bimg_encode64")/g' cmake/bimg/bimg_encode.cmake

@@ -548,8 +548,10 @@ std::filesystem::path CommandLineProcessor::GetPathFromArg(const string& arg)
 
    std::filesystem::path path = PathFromUTF8(pathString);
    path = std::filesystem::absolute(path);
-   path = std::filesystem::weakly_canonical(path);
-   return path;
+   // Game Vault (Xbox): an Xbox app may not look at the folders above its own (weakly_canonical throws there)
+   std::error_code ec;
+   std::filesystem::path canonical = std::filesystem::weakly_canonical(path, ec);
+   return ec ? path.lexically_normal() : canonical;
 }
 
 string CommandLineProcessor::GetCommandLineHelp()

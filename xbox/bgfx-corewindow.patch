@@ -1,0 +1,39 @@
+--- a/src/dxgi.cpp
++++ b/src/dxgi.cpp
+@@ -563,7 +563,11 @@
+ 			.Windowed         = _scd.windowed,
+ 		};
+ 
++		// Game Vault (Xbox): ndt 7 means nwh is a WinRT CoreWindow (the app runs as an Xbox app)
++		const bool coreWindow = reinterpret_cast<void*>(7) == _scd.ndt;
++
+ 		const bool composition = true
++			&& !coreWindow
+ 			&& NULL != m_dcompDll
+ 			&& DXGI_ALPHA_MODE_PREMULTIPLIED == _scd.alphaMode
+ 			&& (DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL == _scd.swapEffect || DXGI_SWAP_EFFECT_FLIP_DISCARD == _scd.swapEffect)
+@@ -596,7 +600,23 @@
+ 			BX_WARN(SUCCEEDED(hr), "Transparent back buffer composition failed, hr 0x%08x, window is opaque.", hr);
+ 		}
+ 
+-		if (FAILED(hr) )
++		if (coreWindow)
++		{
++			scd.Scaling   = DXGI_SCALING_STRETCH;
++			scd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
++			scd.Flags    &= ~DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
++
++			hr = m_factory->CreateSwapChainForCoreWindow(
++				  _device
++				, (::IUnknown*)_scd.nwh
++				, &scd
++				, NULL
++				, reinterpret_cast<IDXGISwapChain1**>(_swapChain)
++				);
++			BX_TRACE("CreateSwapChainForCoreWindow hr 0x%08x", hr);
++		}
++
++		if (FAILED(hr) && !coreWindow)
+ 		{
+ 			scd.Scaling   = _scd.scaling;
+ 			scd.AlphaMode = DXGI_ALPHA_MODE_IGNORE;

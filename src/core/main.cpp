@@ -283,6 +283,115 @@ extern "C" int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, 
 #if defined(__STANDALONE__) && ((defined(__linux__) && !defined(__ANDROID__)) || defined(_WIN32) || defined(__EMSCRIPTEN__))
 extern int g_argc;
 extern const char **g_argv;
+
+#ifdef _WIN32
+// Copyright (c) 2026 Skitzelles - part of Game Vault, https://github.com/skitzellez/xbox-game-vault
+// Game Vault (Xbox): start-up as an Xbox app. Game Vault starts a table with the link
+// vpinball:?table=<path>[&launchOnExit=gamevault:]; started from the tile, the first table in LocalState/VPinballX/tables
+// plays, else the test table that ships in the package.
+#include <appmodel.h>
+#define SDL_MAIN_NOIMPL
+#include <SDL3/SDL_main.h>
+#undef main // SDL_main.h renames main; this file keeps its own
+
+static bool VpxIsPackagedApp()
+{
+   UINT32 len = 0;
+   return GetCurrentPackageFullName(&len, nullptr) == ERROR_INSUFFICIENT_BUFFER;
+}
+
+static string VpxUrlDecode(const string& in)
+{
+   string out;
+   for (size_t i = 0; i < in.size(); i++)
+   {
+      if (in[i] == '%' && i + 2 < in.size() && isxdigit((unsigned char)in[i + 1]) && isxdigit((unsigned char)in[i + 2]))
+      {
+         out += (char)strtol(in.substr(i + 1, 2).c_str(), nullptr, 16);
+         i += 2;
+      }
+      else
+         out += in[i] == '+' ? ' ' : in[i];
+   }
+   return out;
+}
+
+static void VpxXboxLog(const string& base, const string& line)
+{
+   if (FILE* f = fopen((base + "xbox_start.txt").c_str(), "a"))
+   {
+      fprintf(f, "%s\n", line.c_str());
+      fclose(f);
+   }
+}
+
+// Messages for the player (errors before the log opens too) go to xbox_start.txt
+class VpxXboxMessageSink final : public UserMessageSink
+{
+public:
+   string m_base;
+   void Notify(MsgSeverity severity, const string& title, const string& message) override { VpxXboxLog(m_base, "message: " + title + ": " + message); }
+};
+
+static int SDLCALL VpxXboxMain(int, char**)
+{
+   // SDL audio open hangs in an Xbox app (first tests run silent; an XAudio2 path comes later)
+   SDL_SetHint(SDL_HINT_AUDIO_DRIVER, "dummy");
+   // The activation (and its link) arrives while SDL pumps the window's events
+   SDL_InitSubSystem(SDL_INIT_VIDEO);
+   const char* uri = nullptr;
+   for (int i = 0; i < 300 && (uri = SDL_GetHint("SDL_WINRT_ACTIVATION_URI")) == nullptr; i++)
+   {
+      SDL_PumpEvents();
+      SDL_Delay(10);
+   }
+   string link = uri ? uri : "";
+
+   char* pref = SDL_GetPrefPath("", "VPinballX");
+   const string base = pref ? pref : "";
+   SDL_free(pref);
+   const char* install = SDL_GetBasePath();
+   const string installDir = install ? install : "";
+   if (FILE* f = fopen((base + "xbox_start.txt").c_str(), "w"))
+      fclose(f);
+   VpxXboxLog(base, "VPX for Game Vault, link: " + link);
+
+   string table;
+   const size_t q = link.find("table=");
+   if (q != string::npos)
+   {
+      const size_t end = link.find('&', q);
+      table = VpxUrlDecode(link.substr(q + 6, end == string::npos ? string::npos : end - q - 6));
+   }
+   if (table.empty())
+   {
+      std::error_code ec;
+      for (const auto& e : std::filesystem::directory_iterator(base + "tables", ec))
+         if (e.is_regular_file() && lowerCase(e.path().extension().string()) == ".vpx")
+         {
+            table = e.path().string();
+            break;
+         }
+   }
+   if (table.empty())
+      table = installDir + "tables\\test000-default-table.vpx";
+   VpxXboxLog(base, "table: " + table);
+
+   static string s_base, s_table;
+   s_base = base;
+   s_table = table;
+   static const char* s_argv[] = { "VPinballX", "-PrefPath", s_base.c_str(), "-Play", s_table.c_str(), nullptr };
+   g_argc = 5;
+   g_argv = s_argv;
+   static VpxXboxMessageSink s_sink;
+   s_sink.m_base = base;
+   SetUserMessageSink(&s_sink);
+   const int ret = WinMain(NULL, NULL, NULL, 0);
+   VpxXboxLog(base, "exit code " + std::to_string(ret));
+   return ret;
+}
+#endif
+
 int main(int argc, const char** argv) {
 #ifdef _WIN32
    signal(SIGINT, OnSignalHandler);
@@ -292,6 +401,13 @@ int main(int argc, const char** argv) {
    sigemptyset(&sigIntHandler.sa_mask);
    sigIntHandler.sa_flags = 0;
    sigaction(SIGINT, &sigIntHandler, nullptr);
+#endif
+
+#ifdef _WIN32
+   // Game Vault (Xbox): inside an app package this is an Xbox app. SDL (our sdl3-uwp) then runs the WinRT app and
+   // calls VpxXboxMain from the app thread.
+   if (VpxIsPackagedApp())
+      return SDL_RunApp(0, nullptr, VpxXboxMain, nullptr);
 #endif
 
    g_argc = argc;
