@@ -75,7 +75,22 @@ public:
    {
       if (!SDL_JoystickEventsEnabled())
          SDL_UpdateJoysticks();
+      // Game Vault (Xbox): pads arrive a moment after start-up and the added event does not always reach us, so every
+      // second open any controller SDL lists that is not open yet (OnJoystickAdded skips the ones already open)
+      if (SDL_GetTicks() > m_nextPadCheck)
+      {
+         m_nextPadCheck = SDL_GetTicks() + 1000;
+         int count = 0;
+         if (SDL_JoystickID* const ids = SDL_GetJoysticks(&count); ids)
+         {
+            if (count > (int)m_joysticks.size())
+               for (int i = 0; i < count; i++)
+                  OnJoystickAdded(ids[i]);
+            SDL_free(ids);
+         }
+      }
    }
+   Uint64 m_nextPadCheck = 0;
 
    void HandleSDLEvent(const SDL_Event& e)
    {
