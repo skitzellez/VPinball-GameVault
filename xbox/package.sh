@@ -32,8 +32,24 @@ cp "$SDL3_UWP/build-uwp/RelWithDebInfo/SDL3.dll" "$P/SDL364.dll"
 cp "$SDL3_UWP/build-uwp/RelWithDebInfo/SDL3.dll" "$P/plugins/flexdmd/SDL364.dll"
 for f in vcruntime140.dll vcruntime140_1.dll msvcp140.dll msvcp140_atomic_wait.dll; do cp "$CRT/$f" "$P/"; done
 cp "$REPO/tests/assets/test000-default-table.vpx" "$P/tables/"
-cp "$REPO/LICENSE" "$P/licenses/VPinballX-LICENSE.txt" 2>/dev/null || true
+cp "$REPO/docs/license.txt" "$P/licenses/VPinballX-license.txt"
 cp "$SDL3_UWP/LICENSE.txt" "$P/licenses/SDL3-LICENSE.txt"
+# the libraries inside, each with its own licence
+EXT=$REPO/external/windows-x64/Release
+for l in "bgfx/bgfx.cmake/bgfx/LICENSE:bgfx" "freeimage/freeimage/license-fi.txt:FreeImage" "libaltsound/libaltsound/LICENSE:libaltsound" \
+         "libdmdutil/libdmdutil/LICENSE:libdmdutil" "libdof/libdof/LICENSE:libdof" "libmysofa/libmysofa/LICENSE:libmysofa" \
+         "libpupdmd/libpupdmd/LICENSE:libpupdmd" "libserum/libserum/LICENSE.md:libserum" "libspatialaudio/libspatialaudio/LICENSE:libspatialaudio" \
+         "libvni/libvni/LICENSE.md:libvni" "opus/ogg/COPYING:ogg" "pinmame/pinmame/LICENSE:PinMAME" "pinmame-data/gamedefs/LICENSE:pinmame-gamedefs" \
+         "zlib/zlib/LICENSE:zlib" "ffmpeg/ffmpeg/LICENSE.md:FFmpeg" "ffmpeg/ffmpeg/COPYING.LGPLv2.1:FFmpeg-LGPL-2.1" "ffmpeg/ffmpeg/COPYING.GPLv2:FFmpeg-GPL-2"; do
+  cp "$EXT/${l%%:*}" "$P/licenses/${l##*:}-license.txt"
+done
+# the VBScript engine is Wine's (LGPL 2.1), https://github.com/vpinball/libwinevbs
+cp "$EXT/ffmpeg/ffmpeg/COPYING.LGPLv2.1" "$P/licenses/libwinevbs-Wine-LGPL-2.1.txt"
+cat > "$P/licenses/SOURCE.txt" <<'SRC'
+Game Vault · Visual Pinball is Visual Pinball X standalone (https://github.com/vpinball/vpinball), built for Xbox by
+Skitzelles for Game Vault. The source of this build, with all changes: https://github.com/skitzellez/VPinball-GameVault
+(branch gamevault). The libraries keep their own licences, in this folder.
+SRC
 
 # nothing from the build PC's folders may ship
 PY=${PY:-/c/Users/GamerDad/AppData/Local/Programs/Python/Python312/python.exe}
