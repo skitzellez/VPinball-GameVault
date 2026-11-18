@@ -1,40 +1,124 @@
-# Visual Pinball
+<p align="center">
+  <img src="https://raw.githubusercontent.com/skitzellez/xbox-game-vault/main/GameVault/art/logo-banner.png" alt="Game Vault" width="720">
+</p>
 
-*An open source pinball table editor and simulator.*
+<h3 align="center">Game Vault · Visual Pinball</h3>
 
-This project was started by Randy Davis, open sourced in 2010 and continued by the Visual Pinball development team. This is the official repository.
+<p align="center">
+  <b>Visual Pinball X tables on your Xbox, with the controller.</b><br>
+  Visual Pinball X with PinMAME for <a href="https://github.com/skitzellez/xbox-game-vault">Game Vault</a> on <b>Xbox Series X|S</b> in Dev Mode:
+  pick a table in Game Vault and it plays here, then you are back in Game Vault.
+</p>
 
-## Features
+<!-- gv-buttons:start -->
+<p align="center">
+  <a href="https://github.com/skitzellez/VPinball-GameVault/releases/latest"><img alt="DOWNLOAD Visual Pinball" src="https://img.shields.io/badge/DOWNLOAD-Visual%20Pinball-107C10?style=for-the-badge&logo=xbox&logoColor=white"></a>
+  &nbsp;
+  <a href="https://github.com/skitzellez/xbox-game-vault"><img alt="Get Game Vault" src="https://img.shields.io/badge/GET-Game%20Vault-107C10?style=for-the-badge&logo=xbox&logoColor=white"></a>
+  &nbsp;
+  <a href="https://discord.gg/RmhhWgguvw"><img alt="Join the Game Vault Discord" src="https://img.shields.io/badge/JOIN-Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white"></a>
+  &nbsp;
+  <a href="https://www.patreon.com/Skitzelles"><img alt="Support on Patreon" src="https://img.shields.io/badge/SUPPORT-Patreon-F96854?style=for-the-badge&logo=patreon&logoColor=white"></a>
+</p>
+<!-- gv-buttons:end -->
 
-- Simulates pinball table physics and renders the table with DirectX, OpenGL or [bgfx](https://bkaradzic.github.io/bgfx/overview.html)
-- Simple editor to (re-)create any kind of pinball table
-- Live editing of most content within the rendered viewport
-- Table logic (and game rules) can be controlled via Visual Basic Script
-- Over 1050 real/unique pinball machines from ~100 manufacturers, plus over 550 original creations were rebuilt/designed using the Visual Pinball X editor (over 3000 if one counts all released tables, incl. MODs and different variants), and even more when including its predecessor versions (Visual Pinball 9.X)
-- Emulation of real pinball machines via [PinMAME](https://github.com/vpinball/pinmame) is possible via Visual Basic Script (Visual PinMAME), or via the libPinMAME-API/plugin
-- Supports configurable camera views (e.g. to allow for correct display in virtual pinball cabinets)
-- Support for Tablet/Touch input, Joypads, or specialized pinball controllers
-- Support for Stereo3D output
-- Support for Head tracking via BAM
-- Support for VR/XR HMD rendering (including [PUP](https://www.nailbuster.com/wikipinup), [B2S](https://github.com/vpinball/b2s-backglass) backglass and DMD output support)
-- Support for WCG/HDR rendering (for now only via the BGFX (D3D11/12) build)
-- Support for Windows (x86), Linux (x86/Arm, incl. RaspberryPi and RK3588), macOS, iOS/iPadOS, Android and Meta Quest (the iOS and Android builds are also available via the respective app stores for free)
-- Plugin system to drive/fuel all kinds of displays (DMD, backglass, etc), add custom/dynamically-changed content (PUP, Serum, etc), direct output framework (DOF), sensors, and much more (WIP)
+<p align="center">
+  <img src="xbox/art/table.png" alt="A Visual Pinball X table running on an Xbox Series console" width="720">
+</p>
 
-## Download
+## 🎮 What it is
 
-All releases are available on the [releases page](https://github.com/vpinball/vpinball/releases).
+[Visual Pinball X](https://github.com/vpinball/vpinball) is a free pinball simulator. Its tables are `.vpx` files, and fans have
+recreated hundreds of real machines and made many originals. Tables of real machines run the machine's own program in
+[PinMAME](https://github.com/vpinball/pinmame). This app is Visual Pinball X standalone, made for Xbox Series X|S in Dev Mode.
 
-## Documentation
+**No tables or ROMs are included.** Bring your own, and only play what you have the right to play.
 
-Documentation is currently sparse. Check the [docs](docs) directory for various guides and references.
+## 1️⃣ 2️⃣ 3️⃣ How to play
 
-An [unofficial wiki](https://github.com/dekay/vpinball-wiki) is currently being developed. Community contributions, suggestions, and help are welcome to improve the resource for all users.
+| | |
+|---|---|
+| **1** | Install [Game Vault](https://github.com/skitzellez/xbox-game-vault). Its setup adds this app, or press RT in Game Vault to add it with your phone. |
+| **2** | Put your `.vpx` tables on your games USB drive, for example in a `Pinball` folder. A table of a real machine needs that machine's ROM (`.zip`, don't unpack it) in a `pinmame\roms` folder next to the table. |
+| **3** | Open the **PINBALL** shelf in Game Vault and press A. |
 
-## How to build
+```
+Pinball\
+  Some Table.vpx
+  Some Table.directb2s   (its backglass, optional)
+  pinmame\
+    roms\
+      <the machine's rom>.zip
+```
 
-Build instructions are available in the [make directory README](make/README.md).
+## 🕹️ Controls
 
-## Participate
+| Controller | On the table |
+|---|---|
+| LT / RT | Left / right flipper |
+| A | Launch the ball |
+| Right stick | Pull the plunger back, let go to launch |
+| Left stick | Nudge the table |
+| LB / RB | Magna-save buttons |
+| Y | Insert a coin |
+| B | Start a game |
+| D-pad | The machine's service menu |
+| Menu | Visual Pinball's menu |
+| View | Quit, back to Game Vault |
 
-Read through our [contribution](CONTRIBUTING.md) rules carefully before opening PRs, please.
+## 📜 Credits and licence
+
+- Visual Pinball X: © the Visual Pinball team and contributors. GPLv3+, with older parts under the original licence: see [docs/license.txt](docs/license.txt).
+- PinMAME, the VBScript engine (from Wine), bgfx, FFmpeg, FreeImage and the other libraries keep their own licences; the app carries them all in its `licenses` folder.
+- Xbox port: Skitzelles, in `xbox/` and the changes marked "Game Vault" in the source.
+
+This is a modified version of Visual Pinball X, not made or supported by the Visual Pinball team. Please report problems with this app to Game Vault, not to them.
+
+<!-- gv-family:start -->
+## 🎮 The Game Vault family
+
+Game Vault is one launcher plus emulators built to work with it. **Install [Game Vault](https://github.com/skitzellez/xbox-game-vault) and it sets these up for you**; press **RT** in Game Vault to update them all.
+
+**Apps**
+
+| Project | What it is | Runs on |
+|---|---|---|
+| [Game Vault](https://github.com/skitzellez/xbox-game-vault) | The launcher: plug in a USB drive, pick a game, play. Sets up everything below by itself. | Xbox Series X&#124;S |
+| [Game Vault for Android](https://github.com/skitzellez/game-vault-android) | The same game library for phones, tablets and Android TV (beta). | Android |
+| [Game Vault for iPhone](https://github.com/skitzellez/game-vault-ios) | The Game Vault look on iPhone (early test). | iPhone |
+
+**Emulators built for Game Vault**
+
+| Project | What it is | Runs on |
+|---|---|---|
+| [xemu for Xbox Dev Mode](https://github.com/skitzellez/xemu-uwp) | Original Xbox | Xbox Series X&#124;S |
+| [Xenia for Game Vault](https://github.com/skitzellez/Xenia-GameVault) | Xbox 360 | Xbox Series X&#124;S |
+| [XBSX2 for Game Vault](https://github.com/skitzellez/XBSX2-GameVault) | PlayStation 2 | Xbox Series X&#124;S |
+| [Dolphin for Game Vault](https://github.com/skitzellez/Dolphin-GameVault) | GameCube and Wii | Xbox Series X&#124;S |
+| [Game Vault · Wii U (Cemu)](https://github.com/skitzellez/Cemu-GameVault) | Wii U | Xbox Series X&#124;S |
+| [RPCS3 for Game Vault](https://github.com/skitzellez/RPCS3-GameVault) | PlayStation 3 | Xbox Series X&#124;S |
+| [Game Vault · PS Vita](https://github.com/skitzellez/Vita-GameVault) | PlayStation Vita (Vitox / Vita3K) | Xbox Series X&#124;S |
+| [Flycast for Game Vault](https://github.com/skitzellez/Flycast-GameVault) | Sega NAOMI, NAOMI 2 and Atomiswave arcade | Xbox Series X&#124;S |
+| [RetroArch for Game Vault](https://github.com/skitzellez/RetroArch-GameVault) | PlayStation, Dreamcast, arcade, classic consoles and computers (80+ systems) | Xbox Series X&#124;S, Android |
+| [Game Vault · Flash](https://github.com/skitzellez/Flash-GameVault) | Flash games | Xbox Series X&#124;S |
+| [Game Vault · OpenBOR](https://github.com/skitzellez/OpenBOR-GameVault) | OpenBOR beat 'em up games | Xbox Series X&#124;S |
+| [**Game Vault · Visual Pinball**](https://github.com/skitzellez/VPinball-GameVault) 📍 *you are here* | Visual Pinball X pinball tables (with PinMAME) | Xbox Series X&#124;S |
+| [Gambatte for Game Vault](https://github.com/skitzellez/Gambatte-GameVault) | Game Boy link cable in online rooms | Xbox Series X&#124;S, Android |
+| [X1 BOX for Game Vault](https://github.com/skitzellez/x1box-gamevault) | Original Xbox | Android |
+
+**Extras**
+
+| Project | What it is | Runs on |
+|---|---|---|
+| [Free games](https://github.com/skitzellez/game-vault-free-games) | Freeware and shareware for the FREE GAMES tab | Game Vault |
+| [Game Vault · Web](https://github.com/skitzellez/Web-GameVault) | Websites from the WEB menu, with the controller | Xbox Series X&#124;S |
+| [Fallout 1in2 for Xbox](https://github.com/skitzellez/Fallout1in2-Xbox) | The original Fallout, made for the controller | Xbox Series X&#124;S |
+| [Game Vault updates](https://github.com/skitzellez/game-vault-updates) | Update data Game Vault reads when it starts | Game Vault |
+
+**💬 Help, news and bug reports:** the [Game Vault Discord](https://discord.gg/RmhhWgguvw) (or this repo's Issues).
+Please don't take problems with these builds to the original emulator teams: they don't make or support them.
+<!-- gv-family:end -->
+
+## ❤️ Support
+
+Game Vault and its emulators are free and stay free. If you'd like to help, you can support it on **[Patreon](https://www.patreon.com/Skitzelles)**. ❤️
